@@ -1,8 +1,8 @@
 --- @since 25.12.29
 
-local function notify(level, content, timeout)
+local function notify(title, level, content, timeout)
 	ya.notify({
-		title = "goto-clipboard",
+		title = title,
 		content = content,
 		timeout = timeout or 4,
 		level = level,
@@ -32,6 +32,9 @@ local function parse_file_uri(s)
 	s = uri_decode(s)
 	if ya.target_os() == "windows" then
 		local host, path = s:match("^file://([^/]+)(/.+)$")
+		if host and host:match("^%a:$") then
+			return host .. path:gsub("/", "\\")
+		end
 		if host and host ~= "" and host ~= "localhost" then
 			return "\\\\" .. host .. path:gsub("/", "\\")
 		end
@@ -47,6 +50,8 @@ end
 
 local function normalize_path(s)
 	s = strip_quotes(s)
+	s = s:gsub("^%s*cd%s+", "")
+	s = strip_quotes(s)
 	if s == "" then
 		return nil
 	end
@@ -56,8 +61,6 @@ local function normalize_path(s)
 	end
 
 	if ya.target_os() == "windows" then
-		s = s:gsub("^%s*cd%s+", "")
-		s = strip_quotes(s)
 		if s:match("^%a:[/\\]") or s:match("^\\\\") then
 			return s:gsub("/", "\\")
 		end
@@ -89,6 +92,18 @@ local function path_name(path)
 	return path:match("[^/\\]+$") or path
 end
 
+local function compact(s, max)
+	s = trim(s):gsub("%s+", " ")
+	max = max or 72
+	if #s <= max then
+		return s
+	end
+
+	local head = math.floor((max - 3) / 2)
+	local tail = max - 3 - head
+	return s:sub(1, head) .. "..." .. s:sub(#s - tail + 1)
+end
+
 local function is_dir(path)
 	local _, err = fs.read_dir(Url(path), { limit = 1, resolve = true })
 	return err == nil
@@ -99,22 +114,18 @@ return {
 		local text = ya.clipboard() or ""
 		local paths = paths_from_text(text)
 		if #paths == 0 then
-			local preview = trim(text) == "" and "剪贴板为空" or trim(text):gsub("%s+", " "):sub(1, 120)
-			return notify("warn", "剪贴板里没有可识别的路径\n" .. preview, 5)
+			local content = trim(text) == "" and "剪贴板为空" or "无有效路径: " .. compact(text)
+			return notify("未跳转", "warn", content, 4)
 		end
 
 		for _, path in ipairs(paths) do
 			if is_dir(path) then
 				ya.emit("cd", { path })
-				return notify("info", "已跳转到: " .. path, 2.5)
+				return notify("已跳转", "info", path_name(path), 2)
 			end
 		end
 
 		local first = paths[1]
-		notify("warn", table.concat({
-			"剪贴板路径不是可跳转目录，未跳转",
-			"名称: " .. path_name(first),
-			"路径: " .. first,
-		}, "\n"), 6)
+		notify("未跳转", "warn", "不是目录: " .. path_name(first) .. "\n" .. compact(text), 4)
 	end,
 }
