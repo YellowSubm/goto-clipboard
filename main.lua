@@ -61,6 +61,7 @@ local function normalize_path(s)
 	end
 
 	if ya.target_os() == "windows" then
+		s = s:gsub("^/(%a:)", "%1")
 		if s:match("^%a:[/\\]") or s:match("^\\\\") then
 			return s:gsub("/", "\\")
 		end
@@ -90,6 +91,10 @@ end
 
 local function path_name(path)
 	return path:match("[^/\\]+$") or path
+end
+
+local function parent_path(path)
+	return path:match("^(.*)[/\\][^/\\]+$") or ""
 end
 
 local function compact(s, max)
@@ -123,9 +128,15 @@ return {
 				ya.emit("cd", { path })
 				return notify("已跳转", "info", path_name(path), 2)
 			end
+
+			local parent = parent_path(path)
+			if parent ~= "" and is_dir(parent) then
+				ya.emit("reveal", { path })
+				return notify("已定位", "info", path_name(path), 2)
+			end
 		end
 
 		local first = paths[1]
-		notify("未跳转", "warn", "不是目录: " .. path_name(first) .. "\n" .. compact(text), 4)
+		notify("未跳转", "warn", "目录不可访问: " .. compact(first) .. "\n" .. compact(text), 4)
 	end,
 }
