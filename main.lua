@@ -28,6 +28,11 @@ local function uri_decode(s)
 	end))
 end
 
+local function expand_windows_env_vars(s)
+	return (s:gsub("%%([^%%]+)%%", function(name)
+		return os.getenv(name) or "%" .. name .. "%"
+	end))
+end
 local function parse_file_uri(s)
 	s = uri_decode(s)
 	if ya.target_os() == "windows" then
@@ -61,6 +66,7 @@ local function normalize_path(s)
 	end
 
 	if ya.target_os() == "windows" then
+		s = expand_windows_env_vars(s)
 		s = s:gsub("^/(%a:)", "%1")
 		if s:match("^%a:[/\\]") or s:match("^\\\\") then
 			return s:gsub("/", "\\")

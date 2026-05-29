@@ -21,7 +21,7 @@ desc = "跳转到剪贴板地址"
 
 ## 支持格式
 
-- Windows: `C:/path`、`/C:/path`、`C:\path`、`\\server\share`、`file:///C:/path`
+- Windows: `C:/path`、`/C:/path`、`C:\path`、`\\server\share`、`file:///C:/path`、`%APPDATA%\yazi`
 - Unix: `/path`、`~/path`、`file:///path`
 - 可带引号，也支持 `cd path` 形式。
 
